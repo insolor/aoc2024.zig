@@ -45,5 +45,19 @@ pub fn run() !void {
         sum += @abs(l - r);
     }
 
-    std.debug.print("Result: {}\n", .{sum});
+    std.debug.print("Part 1: {}\n", .{sum});
+
+    var rightCounts = std.AutoHashMap(i32, i32).init(allocator);
+
+    for (right) |r| {
+        const value = (rightCounts.getOrPutValue(r, 0) catch unreachable).value_ptr.*;
+        rightCounts.put(r, value + 1) catch unreachable;
+    }
+
+    var similarity: i32 = 0;
+    for (left) |l| {
+        similarity += (rightCounts.get(l) orelse 0) * l;
+    }
+
+    std.debug.print("Part 2: {}\n", .{similarity});
 }
