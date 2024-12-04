@@ -20,10 +20,7 @@ fn getIntPart(s: []const u8) ?[]const u8 {
 }
 
 fn startsWith(s: []const u8, prefix: []const u8) bool {
-    if (s.len < prefix.len) {
-        return false;
-    }
-    return std.mem.eql(u8, s[0..prefix.len], prefix);
+    return std.mem.startsWith(u8, s, prefix);
 }
 
 fn parseMul(s: []const u8) !?struct { value: u32, len: usize } {
