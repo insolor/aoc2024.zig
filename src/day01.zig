@@ -50,7 +50,7 @@ pub fn run() !void {
     var rightCounts = std.AutoHashMap(i32, i32).init(allocator);
 
     for (right) |r| {
-        const value = (rightCounts.getOrPutValue(r, 0) catch unreachable).value_ptr.*;
+        const value = rightCounts.get(r) orelse 0;
         rightCounts.put(r, value + 1) catch unreachable;
     }
 
