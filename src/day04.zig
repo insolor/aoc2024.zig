@@ -51,7 +51,7 @@ fn checkVertical(data: []const []const u8, string: []const u8, column: usize) us
     return 1;
 }
 
-fn checkDiagonal(data: []const []const u8, string: []const u8, column: usize) usize {
+fn checkRightDownDiagonal(data: []const []const u8, string: []const u8, column: usize) usize {
     if (string.len > data.len) {
         return 0;
     }
@@ -68,6 +68,23 @@ fn checkDiagonal(data: []const []const u8, string: []const u8, column: usize) us
     return 1;
 }
 
+fn checkLeftDownDiagonal(data: []const []const u8, string: []const u8, column: usize) usize {
+    if (string.len > data.len) {
+        return 0;
+    }
+
+    for (string, 0..) |char, i| {
+        const row = data[i];
+        if (column < i) {
+            return 0;
+        }
+        if (row[column - i] != char) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 fn fullCount(data: []const []const u8, string: []const u8) usize {
     var count: usize = 0;
     for (data, 0..) |row, i| {
@@ -75,7 +92,8 @@ fn fullCount(data: []const []const u8, string: []const u8) usize {
             if (char == string[0]) {
                 count += checkHorizontal(row[j..], string);
                 count += checkVertical(data[i..], string, j);
-                count += checkDiagonal(data[i..], string, j);
+                count += checkRightDownDiagonal(data[i..], string, j);
+                count += checkLeftDownDiagonal(data[i..], string, j);
             }
         }
     }
