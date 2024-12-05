@@ -98,4 +98,5 @@ pub fn run() !void {
     std.debug.print("Day 03\n", .{});
     try part1();
     try part2();
+    std.debug.print("\n", .{});
 }

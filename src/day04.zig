@@ -174,4 +174,5 @@ pub fn run() !void {
     std.debug.print("Day 04\n", .{});
     try part1();
     try part2();
+    std.debug.print("\n", .{});
 }

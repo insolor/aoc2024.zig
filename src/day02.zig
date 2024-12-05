@@ -46,10 +46,10 @@ pub fn run() !void {
         rows.deinit();
     }
 
-    var lines = std.mem.split(u8, input, "\n");
+    var lines = std.mem.splitSequence(u8, input, "\n");
 
     while (lines.next()) |line| {
-        var parts = std.mem.split(u8, line, " ");
+        var parts = std.mem.splitSequence(u8, line, " ");
         var row = ArrayList(i32).init(allocator);
 
         while (parts.next()) |part| {
@@ -85,4 +85,5 @@ pub fn run() !void {
     }
 
     std.debug.print("Part 2: {}\n", .{safe});
+    std.debug.print("\n", .{});
 }
