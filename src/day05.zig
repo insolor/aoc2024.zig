@@ -88,8 +88,55 @@ fn part1(source_data: SourceData, allocator: std.mem.Allocator) !void {
     std.debug.print("Part 1: {}\n", .{sum});
 }
 
-fn part2() !void {
-    std.debug.print("Part 2: {}\n", .{0});
+const Comparator = struct {
+    rule_map: std.AutoHashMap(Rule, void),
+
+    fn less_then(self: Comparator, a: usize, b: usize) bool {
+        return !self.rule_map.contains(.{ b, a });
+    }
+};
+
+fn part2(source_data: SourceData, allocator: std.mem.Allocator) !void {
+    var sum: usize = 0;
+
+    var map = std.AutoHashMap(usize, usize).init(allocator);
+    defer map.deinit();
+
+    var rule_map = std.AutoHashMap(Rule, void).init(allocator);
+    defer rule_map.deinit();
+    for (source_data.rules.items) |rule| {
+        rule_map.put(rule.*, {}) catch unreachable;
+    }
+
+    for (source_data.pages.items) |page| {
+        map.clearRetainingCapacity();
+        for (page.items, 0..) |item, i| {
+            map.put(item, i) catch unreachable;
+        }
+
+        for (source_data.rules.items) |rule| {
+            const first_index = map.get(rule[0]) orelse continue;
+            const second_index = map.get(rule[1]) orelse continue;
+            if (first_index > second_index) {
+                break;
+            }
+        } else {
+            continue;
+        }
+
+        // std.debug.print("Incorrect: {any}\n", .{page.items});
+
+        const context = Comparator{ .rule_map = rule_map };
+        std.mem.sort(usize, page.items, context, Comparator.less_then);
+
+        // std.debug.print("Sorted: {any}\n", .{page.items});
+
+        const middle_item = page.items[(page.items.len - 1) / 2];
+        // std.debug.print("Middle: {}\n", .{middle_item});
+        sum += middle_item;
+    }
+
+    std.debug.print("Part 2: {}\n", .{sum});
 }
 
 pub fn run() !void {
@@ -114,6 +161,6 @@ pub fn run() !void {
     // data.debug_print();
 
     try part1(data, allocator);
-    try part2();
+    try part2(data, allocator);
     std.debug.print("\n", .{});
 }
