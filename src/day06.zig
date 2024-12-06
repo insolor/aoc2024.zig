@@ -59,19 +59,12 @@ fn outOfBounds(position: Position, data: []const []const u8) bool {
     return position.x < 0 or position.y < 0 or position.x >= data[0].len or position.y >= data.len;
 }
 
-fn printVisited(visited: AutoHashMap(Position, void)) void {
-    var iterator = visited.keyIterator();
-    while (iterator.next()) |position| {
-        print("{}\n", .{position});
-    }
-}
+const State = struct { position: Position, direction: Direction };
 
 const Iterator = struct {
     field: []const []const u8,
     position: Position,
     direction: Direction = .north,
-
-    const State = struct { position: Position, direction: Direction };
 
     fn next(self: *Iterator) ?State {
         var newPosition: Position = self.direction.step(self.position);
@@ -102,10 +95,90 @@ fn part1(data: []const []const u8, allocator: std.mem.Allocator) !void {
     print("Part 1: {}\n", .{visited.count()});
 }
 
+fn allocFieldCopy(data: []const []const u8, allocator: std.mem.Allocator) ![][]u8 {
+    const fieldCopy = try allocator.alloc([]u8, data.len);
+    for (fieldCopy, 0..) |_, y| {
+        fieldCopy[y] = try allocator.alloc(u8, data[y].len);
+    }
+    return fieldCopy;
+}
+
+fn freeFieldCopy(fieldCopy: [][]u8, allocator: std.mem.Allocator) void {
+    for (fieldCopy) |row| {
+        allocator.free(row);
+    }
+    allocator.free(fieldCopy);
+}
+
+fn copyField(dest: [][]u8, source: []const []const u8) void {
+    for (source, 0..) |row, y| {
+        @memcpy(dest[y], row);
+    }
+}
+
+fn printVisited(fieldCopy: [][]u8, visited: AutoHashMap(Position, void)) void {
+    for (fieldCopy, 0..) |row, i| {
+        for (row, 0..) |char, j| {
+            if (visited.contains(.{ .x = @intCast(j), .y = @intCast(i) })) {
+                print("x", .{});
+            } else {
+                print("{c}", .{char});
+            }
+        }
+        print("\n", .{});
+    }
+}
+
+fn printVariant(fieldCopy: [][]u8, x: usize, y: usize) void {
+    for (fieldCopy, 0..) |row, i| {
+        for (row, 0..) |char, j| {
+            if (i == y and j == x) {
+                print("O", .{});
+            } else {
+                print("{c}", .{char});
+            }
+        }
+        print("\n", .{});
+    }
+}
+
 fn part2(data: []const []const u8, allocator: std.mem.Allocator) !void {
-    _ = data;
-    _ = allocator;
-    print("Part 2\n", .{});
+    var states = AutoHashMap(State, void).init(allocator);
+    defer states.deinit();
+
+    var fieldCopy = try allocFieldCopy(data, allocator);
+    defer freeFieldCopy(fieldCopy, allocator);
+
+    const initialPosition = findStart(data);
+
+    var variants: usize = 0;
+    for (data, 0..) |row, y| {
+        for (row, 0..) |char, x| {
+            if (char != '.') {
+                continue;
+            }
+            states.clearRetainingCapacity();
+
+            copyField(fieldCopy, data);
+            fieldCopy[y][x] = '#';
+            var iterator = Iterator{
+                .field = fieldCopy,
+                .position = initialPosition,
+            };
+            while (iterator.next()) |state| {
+                if (states.contains(state)) {
+                    // printVariant(fieldCopy, x, y);
+                    // print("\n", .{});
+
+                    variants += 1;
+                    break;
+                }
+                try states.put(state, {});
+            }
+        }
+    }
+
+    print("Part 2: {}\n", .{variants});
 }
 
 pub fn run() !void {
