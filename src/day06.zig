@@ -66,40 +66,45 @@ fn printVisited(visited: AutoHashMap(Position, void)) void {
     }
 }
 
-fn part1(data: []const []const u8, allocator: std.mem.Allocator) !void {
-    var position = findStart(data);
-    var direction = Direction.north;
+const Iterator = struct {
+    field: []const []const u8,
+    position: Position,
+    direction: Direction = .north,
 
+    const State = struct { position: Position, direction: Direction };
+
+    fn next(self: *Iterator) ?State {
+        var newPosition: Position = self.direction.step(self.position);
+        if (outOfBounds(newPosition, self.field)) {
+            return null;
+        }
+        while (self.field[@intCast(newPosition.y)][@intCast(newPosition.x)] == '#') {
+            self.direction = self.direction.turn();
+            newPosition = self.direction.step(self.position);
+        }
+        self.position = newPosition;
+        return .{ .position = self.position, .direction = self.direction };
+    }
+};
+
+fn part1(data: []const []const u8, allocator: std.mem.Allocator) !void {
     var visited = AutoHashMap(Position, void).init(allocator);
     defer visited.deinit();
 
-    while (true) {
-        try visited.put(position, {});
-        print("direction: {}\n", .{direction});
-        print("position: {}\n", .{position});
-        // printVisited(visited);
-        var newPosition: Position = direction.step(position);
-        if (outOfBounds(newPosition, data)) {
-            break;
-        }
-        print("ahead: {c}\n", .{data[@intCast(newPosition.y)][@intCast(newPosition.x)]});
-        while (data[@intCast(newPosition.y)][@intCast(newPosition.x)] == '#') {
-            print("turning\n", .{});
-            direction = direction.turn();
-            newPosition = direction.step(position);
-            print("direction: {}\n", .{direction});
-            print("ahead: {c}\n", .{data[@intCast(newPosition.y)][@intCast(newPosition.x)]});
-        }
-        position = newPosition;
-        print("\n", .{});
+    var iterator = Iterator{
+        .field = data,
+        .position = findStart(data),
+    };
+    while (iterator.next()) |it| {
+        try visited.put(it.position, {});
     }
 
     print("Part 1: {}\n", .{visited.count()});
 }
 
-fn part2(data: []const []const u8) !void {
+fn part2(data: []const []const u8, allocator: std.mem.Allocator) !void {
     _ = data;
-
+    _ = allocator;
     print("Part 2\n", .{});
 }
 
@@ -114,7 +119,7 @@ pub fn run() !void {
     defer data.deinit();
 
     try part1(data.items, allocator);
-    try part2(data.items);
+    try part2(data.items, allocator);
 
     print("\n", .{});
 }
