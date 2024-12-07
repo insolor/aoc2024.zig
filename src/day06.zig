@@ -136,6 +136,20 @@ fn printVariant(field: [][]u8, x: usize, y: usize) void {
     }
 }
 
+fn checkInfiniteLoop(field: [][]u8, initial_position: Position, states: *AutoHashMap(State, void)) !bool {
+    var iterator = Iterator{
+        .field = field,
+        .position = initial_position,
+    };
+    while (iterator.next()) |state| {
+        if (states.contains(state)) {
+            return true;
+        }
+        try states.put(state, {});
+    }
+    return false;
+}
+
 fn part2(data: []const []const u8, allocator: std.mem.Allocator) !void {
     var states = AutoHashMap(State, void).init(allocator);
     defer states.deinit();
@@ -156,19 +170,8 @@ fn part2(data: []const []const u8, allocator: std.mem.Allocator) !void {
             field_copy[y][x] = '#';
             defer field_copy[y][x] = '.';
 
-            var iterator = Iterator{
-                .field = field_copy,
-                .position = initial_position,
-            };
-            while (iterator.next()) |state| {
-                if (states.contains(state)) {
-                    // printVariant(field_copy, x, y);
-                    // print("\n", .{});
-
-                    variants += 1;
-                    break;
-                }
-                try states.put(state, {});
+            if (try checkInfiniteLoop(field_copy, initial_position, &states)) {
+                variants += 1;
             }
         }
     }
