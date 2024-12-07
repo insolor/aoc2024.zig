@@ -142,10 +142,62 @@ fn part1(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
     print("Part 1: {d}\n", .{sum});
 }
 
+fn getMagnitude(n: u64) u64 {
+    var result: u64 = 1;
+    while (result < n) {
+        result *= 10;
+    }
+    return result;
+}
+
+fn glueArgument(arguments: []u64, argument: u64) void {
+    const last = arguments[arguments.len - 1];
+    arguments[arguments.len - 1] = last * getMagnitude(argument) + argument;
+}
+
+fn glueArguments(
+    arguments: []u64,
+    operators: []u8,
+    allocator: Allocator,
+) struct { ArrayList(u64), ArrayList(u8) } {
+    var new_arguments = ArrayList(u64).init(allocator);
+    var new_operators = ArrayList(u8).init(allocator);
+
+    new_arguments.append(arguments[0]) catch unreachable;
+    for (operators, 0..) |operator, i| {
+        if (operator == '|') {
+            glueArgument(new_arguments.items, arguments[i + 1]);
+            continue;
+        }
+
+        new_arguments.append(arguments[i + 1]) catch unreachable;
+        new_operators.append(operator) catch unreachable;
+    }
+
+    return .{ new_arguments, new_operators };
+}
+
 fn applyOperators2(arguments: []u64, operators: []u8) u64 {
-    var result = arguments[0];
-    for (operators, 1..) |op, i| {
-        const argument = arguments[i];
+    var new_arguments, var new_operators = glueArguments(
+        arguments,
+        operators,
+        std.heap.page_allocator,
+    );
+    defer new_arguments.deinit();
+    defer new_operators.deinit();
+
+    // if (new_arguments.items.len < arguments.len) {
+    //     print("arguments: {any}\n", .{arguments});
+    //     print("operators: {s}\n", .{operators});
+    //     print("new_arguments: {any}\n", .{new_arguments.items});
+    //     print("new_operators: {s}\n", .{new_operators.items});
+    //     print("\n", .{});
+    // }
+
+    var result = new_arguments.items[0];
+
+    for (new_operators.items, 1..) |op, i| {
+        const argument = new_arguments.items[i];
         if (op == '+') {
             result += argument;
         } else {
@@ -157,7 +209,7 @@ fn applyOperators2(arguments: []u64, operators: []u8) u64 {
 
 fn solvable2(row: *DataRow, allocator: Allocator) bool {
     var op_iterator = OperatorIterator.init(
-        "*+",
+        "*+|",
         row.arguments.items.len - 1,
         allocator,
     );
@@ -174,7 +226,7 @@ fn solvable2(row: *DataRow, allocator: Allocator) bool {
 fn part2(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
     var sum: u64 = 0;
     for (data.items) |row| {
-        if (solvable(row, allocator)) {
+        if (solvable2(row, allocator)) {
             sum += row.result;
         }
     }
