@@ -44,7 +44,7 @@ const Direction = enum {
     }
 };
 
-fn findStart(data: []const []const u8) Position {
+fn findStart(data: []const []const u8) ?Position {
     for (data, 0..) |row, y| {
         for (row, 0..) |char, x| {
             if (char == '^') {
@@ -52,7 +52,7 @@ fn findStart(data: []const []const u8) Position {
             }
         }
     }
-    unreachable;
+    return null;
 }
 
 fn outOfBounds(position: Position, data: []const []const u8) bool {
@@ -67,15 +67,15 @@ const Iterator = struct {
     direction: Direction = .north,
 
     fn next(self: *Iterator) ?State {
-        var newPosition: Position = self.direction.step(self.position);
-        if (outOfBounds(newPosition, self.field)) {
+        var new_position: Position = self.direction.step(self.position);
+        if (outOfBounds(new_position, self.field)) {
             return null;
         }
-        while (self.field[@intCast(newPosition.y)][@intCast(newPosition.x)] == '#') {
+        while (self.field[@intCast(new_position.y)][@intCast(new_position.x)] == '#') {
             self.direction = self.direction.turn();
-            newPosition = self.direction.step(self.position);
+            new_position = self.direction.step(self.position);
         }
-        self.position = newPosition;
+        self.position = new_position;
         return .{ .position = self.position, .direction = self.direction };
     }
 };
@@ -86,7 +86,7 @@ fn part1(data: []const []const u8, allocator: std.mem.Allocator) !void {
 
     var iterator = Iterator{
         .field = data,
-        .position = findStart(data),
+        .position = findStart(data) orelse unreachable,
     };
     while (iterator.next()) |it| {
         try visited.put(it.position, {});
@@ -95,29 +95,23 @@ fn part1(data: []const []const u8, allocator: std.mem.Allocator) !void {
     print("Part 1: {}\n", .{visited.count()});
 }
 
-fn allocFieldCopy(data: []const []const u8, allocator: std.mem.Allocator) ![][]u8 {
-    const fieldCopy = try allocator.alloc([]u8, data.len);
-    for (fieldCopy, 0..) |_, y| {
-        fieldCopy[y] = try allocator.alloc(u8, data[y].len);
+fn createFieldCopy(data: []const []const u8, allocator: std.mem.Allocator) ![][]u8 {
+    const field_copy = try allocator.alloc([]u8, data.len);
+    for (field_copy, 0..) |_, y| {
+        field_copy[y] = try allocator.dupe(u8, data[y]);
     }
-    return fieldCopy;
+    return field_copy;
 }
 
-fn freeFieldCopy(fieldCopy: [][]u8, allocator: std.mem.Allocator) void {
-    for (fieldCopy) |row| {
+fn freeFieldCopy(field_copy: [][]u8, allocator: std.mem.Allocator) void {
+    for (field_copy) |row| {
         allocator.free(row);
     }
-    allocator.free(fieldCopy);
+    allocator.free(field_copy);
 }
 
-fn copyField(dest: [][]u8, source: []const []const u8) void {
-    for (source, 0..) |row, y| {
-        @memcpy(dest[y], row);
-    }
-}
-
-fn printVisited(fieldCopy: [][]u8, visited: AutoHashMap(Position, void)) void {
-    for (fieldCopy, 0..) |row, i| {
+fn printVisited(field: [][]u8, visited: AutoHashMap(Position, void)) void {
+    for (field, 0..) |row, i| {
         for (row, 0..) |char, j| {
             if (visited.contains(.{ .x = @intCast(j), .y = @intCast(i) })) {
                 print("x", .{});
@@ -129,8 +123,8 @@ fn printVisited(fieldCopy: [][]u8, visited: AutoHashMap(Position, void)) void {
     }
 }
 
-fn printVariant(fieldCopy: [][]u8, x: usize, y: usize) void {
-    for (fieldCopy, 0..) |row, i| {
+fn printVariant(field: [][]u8, x: usize, y: usize) void {
+    for (field, 0..) |row, i| {
         for (row, 0..) |char, j| {
             if (i == y and j == x) {
                 print("O", .{});
@@ -146,10 +140,10 @@ fn part2(data: []const []const u8, allocator: std.mem.Allocator) !void {
     var states = AutoHashMap(State, void).init(allocator);
     defer states.deinit();
 
-    var fieldCopy = try allocFieldCopy(data, allocator);
-    defer freeFieldCopy(fieldCopy, allocator);
+    var field_copy = try createFieldCopy(data, allocator);
+    defer freeFieldCopy(field_copy, allocator);
 
-    const initialPosition = findStart(data);
+    const initial_position = findStart(data) orelse unreachable;
 
     var variants: usize = 0;
     for (data, 0..) |row, y| {
@@ -159,15 +153,16 @@ fn part2(data: []const []const u8, allocator: std.mem.Allocator) !void {
             }
             states.clearRetainingCapacity();
 
-            copyField(fieldCopy, data);
-            fieldCopy[y][x] = '#';
+            field_copy[y][x] = '#';
+            defer field_copy[y][x] = '.';
+
             var iterator = Iterator{
-                .field = fieldCopy,
-                .position = initialPosition,
+                .field = field_copy,
+                .position = initial_position,
             };
             while (iterator.next()) |state| {
                 if (states.contains(state)) {
-                    // printVariant(fieldCopy, x, y);
+                    // printVariant(field_copy, x, y);
                     // print("\n", .{});
 
                     variants += 1;
