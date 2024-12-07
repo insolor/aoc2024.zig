@@ -142,11 +142,43 @@ fn part1(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
     print("Part 1: {d}\n", .{sum});
 }
 
-fn part2(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
-    _ = allocator;
-    _ = data;
+fn applyOperators2(arguments: []u64, operators: []u8) u64 {
+    var result = arguments[0];
+    for (operators, 1..) |op, i| {
+        const argument = arguments[i];
+        if (op == '+') {
+            result += argument;
+        } else {
+            result *= argument;
+        }
+    }
+    return result;
+}
 
-    print("Part 2:\n", .{});
+fn solvable2(row: *DataRow, allocator: Allocator) bool {
+    var op_iterator = OperatorIterator.init(
+        "*+",
+        row.arguments.items.len - 1,
+        allocator,
+    );
+    defer op_iterator.deinit();
+    while (op_iterator.next()) |operators| {
+        if (applyOperators2(row.arguments.items, operators) == row.result) {
+            printSolution(row, operators);
+            return true;
+        }
+    }
+    return false;
+}
+
+fn part2(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
+    var sum: u64 = 0;
+    for (data.items) |row| {
+        if (solvable(row, allocator)) {
+            sum += row.result;
+        }
+    }
+    print("Part 2: {d}\n", .{sum});
 }
 
 pub fn run() !void {
@@ -160,5 +192,7 @@ pub fn run() !void {
     defer freeData(data, allocator);
 
     try part1(data, allocator);
-    // try part2(data, allocator);
+    try part2(data, allocator);
+
+    print("\n", .{});
 }
