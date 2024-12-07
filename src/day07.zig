@@ -177,6 +177,22 @@ fn glueArguments(
     return .{ new_arguments, new_operators };
 }
 
+test "glueArguments" {
+    var arguments = [_]u64{ 6, 8, 6, 15 };
+    var operators = [_]u8{ '*', '|', '*' };
+
+    var new_arguments, var new_operators = glueArguments(
+        arguments[0..],
+        operators[0..],
+        std.heap.page_allocator,
+    );
+    defer new_arguments.deinit();
+    defer new_operators.deinit();
+
+    try std.testing.expect(std.mem.eql(u64, new_arguments.items, &[_]u64{ 6, 86, 15 }));
+    try std.testing.expect(std.mem.eql(u8, new_operators.items, "**"));
+}
+
 fn applyOperators2(arguments: []u64, operators: []u8) u64 {
     var new_arguments, var new_operators = glueArguments(
         arguments,
@@ -207,6 +223,14 @@ fn applyOperators2(arguments: []u64, operators: []u8) u64 {
     return result;
 }
 
+test "applyOperators2" {
+    var arguments = [_]u64{ 6, 8, 6, 15 };
+    var operators = [_]u8{ '*', '|', '*' };
+
+    const result = applyOperators2(arguments[0..], operators[0..]);
+    try std.testing.expectEqual(6 * 86 * 15, result);
+}
+
 fn solvable2(row: *DataRow, allocator: Allocator) bool {
     var op_iterator = OperatorIterator.init(
         "*+|",
@@ -226,6 +250,7 @@ fn solvable2(row: *DataRow, allocator: Allocator) bool {
 fn part2(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
     var sum: u64 = 0;
     for (data.items) |row| {
+        // printRow(row);
         if (solvable2(row, allocator)) {
             sum += row.result;
         }
@@ -244,6 +269,7 @@ pub fn run() !void {
     defer freeData(data, allocator);
 
     try part1(data, allocator);
+    print("\n", .{});
     try part2(data, allocator);
 
     print("\n", .{});
