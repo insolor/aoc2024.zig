@@ -64,13 +64,19 @@ const OperatorIterator = struct {
     max: u64,
     state: u64 = 0,
     buffer: []u8 = undefined,
+    allocator: Allocator = undefined,
 
-    pub fn init(operators: []const u8, count: u64, allocator: Allocator) OperatorIterator {
+    fn init(operators: []const u8, count: u64, allocator: Allocator) OperatorIterator {
         return OperatorIterator{
             .operators = operators,
             .max = std.math.pow(u64, operators.len, count),
             .buffer = allocator.alloc(u8, count) catch unreachable,
+            .allocator = allocator,
         };
+    }
+
+    fn deinit(self: *OperatorIterator) void {
+        self.allocator.free(self.buffer);
     }
 
     fn next(self: *OperatorIterator) ?[]u8 {
@@ -108,6 +114,7 @@ fn solvable(row: *DataRow, allocator: Allocator) bool {
         row.arguments.items.len - 1,
         allocator,
     );
+    defer op_iterator.deinit();
     while (op_iterator.next()) |operators| {
         if (applyOperators(row.arguments.items, operators) == row.result) {
             printSolution(row, operators);
@@ -145,8 +152,7 @@ fn part2(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
 pub fn run() !void {
     print("Day 07\n", .{});
 
-    var gpa = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
