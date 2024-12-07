@@ -10,6 +10,10 @@ const DataRow = struct {
     arguments: ArrayList(u64) = undefined,
 };
 
+fn parseUnsigned(s: []const u8) !u64 {
+    return try std.fmt.parseUnsigned(u64, s, 10);
+}
+
 fn loadData(allocator: std.mem.Allocator) !ArrayList(*DataRow) {
     var result = ArrayList(*DataRow).init(allocator);
 
@@ -26,12 +30,11 @@ fn loadData(allocator: std.mem.Allocator) !ArrayList(*DataRow) {
 
         const result_str = parts.next().?;
 
-        row.result = try std.fmt.parseUnsigned(u64, result_str[0 .. result_str.len - 1], 10);
+        row.result = try parseUnsigned(result_str[0 .. result_str.len - 1]);
 
         row.arguments = ArrayList(u64).init(allocator);
         while (parts.next()) |part| {
-            const argument = try std.fmt.parseUnsigned(u64, part, 10);
-            try row.arguments.append(argument);
+            try row.arguments.append(parseUnsigned(part) catch unreachable);
         }
     }
 
@@ -57,13 +60,15 @@ fn printData(data: ArrayList(*DataRow)) void {
 }
 
 const OperatorIterator = struct {
+    operators: []const u8,
     max: u64,
     state: u64 = 0,
     buffer: []u8 = undefined,
 
-    pub fn init(count: usize, allocator: Allocator) OperatorIterator {
+    pub fn init(operators: []const u8, count: u64, allocator: Allocator) OperatorIterator {
         return OperatorIterator{
-            .max = @as(u64, 1) << @truncate(count),
+            .operators = operators,
+            .max = std.math.pow(u64, operators.len, count),
             .buffer = allocator.alloc(u8, count) catch unreachable,
         };
     }
@@ -76,12 +81,8 @@ const OperatorIterator = struct {
         var value = self.state;
 
         for (self.buffer, 0..) |_, i| {
-            if (value & 1 == 1) {
-                self.buffer[i] = '+';
-            } else {
-                self.buffer[i] = '*';
-            }
-            value >>= 1;
+            self.buffer[i] = self.operators[value % self.operators.len];
+            value /= self.operators.len;
         }
         self.state += 1;
         return self.buffer;
@@ -91,17 +92,22 @@ const OperatorIterator = struct {
 fn applyOperators(arguments: []u64, operators: []u8) u64 {
     var result = arguments[0];
     for (operators, 1..) |op, i| {
+        const argument = arguments[i];
         if (op == '+') {
-            result += arguments[i];
+            result += argument;
         } else {
-            result *= arguments[i];
+            result *= argument;
         }
     }
     return result;
 }
 
 fn solvable(row: *DataRow, allocator: Allocator) bool {
-    var op_iterator = OperatorIterator.init(row.arguments.items.len - 1, allocator);
+    var op_iterator = OperatorIterator.init(
+        "*+",
+        row.arguments.items.len - 1,
+        allocator,
+    );
     while (op_iterator.next()) |operators| {
         if (applyOperators(row.arguments.items, operators) == row.result) {
             printSolution(row, operators);
