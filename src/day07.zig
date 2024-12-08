@@ -147,7 +147,7 @@ fn part1(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
 
 fn getMagnitude(n: u64) u64 {
     var result: u64 = 1;
-    while (result < n) {
+    while (result <= n) {
         result *= 10;
     }
     return result;
