@@ -97,20 +97,23 @@ const OperatorIterator = struct {
 
 fn applyOperators(arguments: []u64, operators: []u8) u64 {
     var result = arguments[0];
+
     for (operators, 1..) |op, i| {
         const argument = arguments[i];
         if (op == '+') {
             result += argument;
-        } else {
+        } else if (op == '*') {
             result *= argument;
-        }
+        } else if (op == '|') {
+            result = result * getMagnitude(argument) + argument;
+        } else unreachable;
     }
     return result;
 }
 
-fn solvable(row: *DataRow, allocator: Allocator) bool {
+fn solvable(row: *DataRow, possible_operators: [] const u8, allocator: Allocator) bool {
     var op_iterator = OperatorIterator.init(
-        "*+",
+        possible_operators,
         row.arguments.items.len - 1,
         allocator,
     );
@@ -135,7 +138,7 @@ fn printSolution(row: *DataRow, opertors: []u8) void {
 fn part1(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
     var sum: u64 = 0;
     for (data.items) |row| {
-        if (solvable(row, allocator)) {
+        if (solvable(row, "+*", allocator)) {
             sum += row.result;
         }
     }
@@ -150,51 +153,19 @@ fn getMagnitude(n: u64) u64 {
     return result;
 }
 
-fn applyOperators2(arguments: []u64, operators: []u8) u64 {
-    var result = arguments[0];
-
-    for (operators, 1..) |op, i| {
-        const argument = arguments[i];
-        if (op == '+') {
-            result += argument;
-        } else if (op == '*') {
-            result *= argument;
-        } else if (op == '|') {
-            result = result * getMagnitude(argument) + argument;
-        } else unreachable;
-    }
-    return result;
-}
-
-test "applyOperators2" {
+test "applyOperators" {
     var arguments = [_]u64{ 6, 8, 6, 15 };
     var operators = [_]u8{ '*', '|', '*' };
 
-    const result = applyOperators2(arguments[0..], operators[0..]);
+    const result = applyOperators(arguments[0..], operators[0..]);
     try std.testing.expectEqual(((6 * 8) * 10 + 6) * 15, result);
-}
-
-fn solvable2(row: *DataRow, allocator: Allocator) bool {
-    var op_iterator = OperatorIterator.init(
-        "*+|",
-        row.arguments.items.len - 1,
-        allocator,
-    );
-    defer op_iterator.deinit();
-    while (op_iterator.next()) |operators| {
-        if (applyOperators2(row.arguments.items, operators) == row.result) {
-            printSolution(row, operators);
-            return true;
-        }
-    }
-    return false;
 }
 
 fn part2(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
     var sum: u64 = 0;
     for (data.items) |row| {
         // printRow(row);
-        if (solvable2(row, allocator)) {
+        if (solvable(row, "+*|", allocator)) {
             sum += row.result;
         }
     }
