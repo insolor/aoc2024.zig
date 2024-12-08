@@ -111,7 +111,7 @@ fn applyOperators(arguments: []u64, operators: []u8) u64 {
     return result;
 }
 
-fn solvable(row: *DataRow, possible_operators: [] const u8, allocator: Allocator) bool {
+fn solvable(row: *DataRow, possible_operators: []const u8, allocator: Allocator) bool {
     var op_iterator = OperatorIterator.init(
         possible_operators,
         row.arguments.items.len - 1,
@@ -120,7 +120,7 @@ fn solvable(row: *DataRow, possible_operators: [] const u8, allocator: Allocator
     defer op_iterator.deinit();
     while (op_iterator.next()) |operators| {
         if (applyOperators(row.arguments.items, operators) == row.result) {
-            printSolution(row, operators);
+            // printSolution(row, operators);
             return true;
         }
     }
@@ -183,7 +183,6 @@ pub fn main() !void {
     defer freeData(data, allocator);
 
     try part1(data, allocator);
-    print("\n", .{});
     try part2(data, allocator);
 
     print("\n", .{});
