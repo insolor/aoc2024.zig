@@ -94,7 +94,7 @@ fn part2() !void {
     std.debug.print("Part 2: {d}\n", .{sum});
 }
 
-pub fn run() !void {
+pub fn main() !void {
     std.debug.print("Day 03\n", .{});
     try part1();
     try part2();

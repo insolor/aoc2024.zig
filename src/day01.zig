@@ -2,7 +2,7 @@ const std = @import("std");
 const ArrayList = std.ArrayList;
 const input = @embedFile("inputs/01.txt");
 
-pub fn run() !void {
+pub fn main() !void {
     std.debug.print("Day 01\n", .{});
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const allocator = arena.allocator();

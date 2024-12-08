@@ -139,7 +139,7 @@ fn part2(source_data: SourceData, allocator: std.mem.Allocator) !void {
     std.debug.print("Part 2: {}\n", .{sum});
 }
 
-pub fn run() !void {
+pub fn main() !void {
     std.debug.print("Day 05\n", .{});
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();

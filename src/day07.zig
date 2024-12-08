@@ -150,75 +150,18 @@ fn getMagnitude(n: u64) u64 {
     return result;
 }
 
-fn glueArgument(arguments: []u64, argument: u64) void {
-    const last = arguments[arguments.len - 1];
-    arguments[arguments.len - 1] = last * getMagnitude(argument) + argument;
-}
-
-fn glueArguments(
-    arguments: []u64,
-    operators: []u8,
-    allocator: Allocator,
-) struct { ArrayList(u64), ArrayList(u8) } {
-    var new_arguments = ArrayList(u64).init(allocator);
-    var new_operators = ArrayList(u8).init(allocator);
-
-    new_arguments.append(arguments[0]) catch unreachable;
-    for (operators, 0..) |operator, i| {
-        if (operator == '|') {
-            glueArgument(new_arguments.items, arguments[i + 1]);
-            continue;
-        }
-
-        new_arguments.append(arguments[i + 1]) catch unreachable;
-        new_operators.append(operator) catch unreachable;
-    }
-
-    return .{ new_arguments, new_operators };
-}
-
-test "glueArguments" {
-    var arguments = [_]u64{ 6, 8, 6, 15 };
-    var operators = [_]u8{ '*', '|', '*' };
-
-    var new_arguments, var new_operators = glueArguments(
-        arguments[0..],
-        operators[0..],
-        std.heap.page_allocator,
-    );
-    defer new_arguments.deinit();
-    defer new_operators.deinit();
-
-    try std.testing.expect(std.mem.eql(u64, new_arguments.items, &[_]u64{ 6, 86, 15 }));
-    try std.testing.expect(std.mem.eql(u8, new_operators.items, "**"));
-}
-
 fn applyOperators2(arguments: []u64, operators: []u8) u64 {
-    var new_arguments, var new_operators = glueArguments(
-        arguments,
-        operators,
-        std.heap.page_allocator,
-    );
-    defer new_arguments.deinit();
-    defer new_operators.deinit();
+    var result = arguments[0];
 
-    // if (new_arguments.items.len < arguments.len) {
-    //     print("arguments: {any}\n", .{arguments});
-    //     print("operators: {s}\n", .{operators});
-    //     print("new_arguments: {any}\n", .{new_arguments.items});
-    //     print("new_operators: {s}\n", .{new_operators.items});
-    //     print("\n", .{});
-    // }
-
-    var result = new_arguments.items[0];
-
-    for (new_operators.items, 1..) |op, i| {
-        const argument = new_arguments.items[i];
+    for (operators, 1..) |op, i| {
+        const argument = arguments[i];
         if (op == '+') {
             result += argument;
-        } else {
+        } else if (op == '*') {
             result *= argument;
-        }
+        } else if (op == '|') {
+            result = result * getMagnitude(argument) + argument;
+        } else unreachable;
     }
     return result;
 }
@@ -228,7 +171,7 @@ test "applyOperators2" {
     var operators = [_]u8{ '*', '|', '*' };
 
     const result = applyOperators2(arguments[0..], operators[0..]);
-    try std.testing.expectEqual(6 * 86 * 15, result);
+    try std.testing.expectEqual(((6 * 8) * 10 + 6) * 15, result);
 }
 
 fn solvable2(row: *DataRow, allocator: Allocator) bool {
@@ -258,7 +201,7 @@ fn part2(data: ArrayList(*DataRow), allocator: std.mem.Allocator) !void {
     print("Part 2: {d}\n", .{sum});
 }
 
-pub fn run() !void {
+pub fn main() !void {
     print("Day 07\n", .{});
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

@@ -32,7 +32,7 @@ fn check_safe(row: []const i32, skip: ?usize) bool {
     return true;
 }
 
-pub fn run() !void {
+pub fn main() !void {
     std.debug.print("Day 02\n", .{});
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();

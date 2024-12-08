@@ -179,7 +179,7 @@ fn part2(data: []const []const u8, allocator: std.mem.Allocator) !void {
     print("Part 2: {}\n", .{variants});
 }
 
-pub fn run() !void {
+pub fn main() !void {
     print("Day 06\n", .{});
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
