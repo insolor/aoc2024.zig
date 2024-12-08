@@ -14,7 +14,6 @@ fn loadData(allocator: std.mem.Allocator) !ArrayList([]const u8) {
         if (line.len == 0) {
             continue;
         }
-        print("{s}\n", .{line});
         try result.append(line);
     }
 
@@ -63,16 +62,58 @@ fn printNodes(nodes: AutoHashMap(u8, ArrayList(Position))) void {
     }
 }
 
+fn getAntinodes(node1: Position, node2: Position) [2]Position {
+    const dx = node2.x - node1.x;
+    const dy = node2.y - node1.y;
+    return .{
+        .{ .x = node1.x - dx, .y = node1.y - dy },
+        .{ .x = node2.x + dx, .y = node2.y + dy },
+    };
+}
+
+test "getAntinodes" {
+    const node1 = Position{ .x = 0, .y = 0 };
+    const node2 = Position{ .x = 1, .y = 1 };
+    const result = getAntinodes(node1, node2);
+    try std.testing.expectEqual(Position{ .x = -1, .y = -1 }, result[0]);
+    try std.testing.expectEqual(Position{ .x = 2, .y = 2 }, result[1]);
+}
+
+fn positionInBounds(position: Position, data: []const []const u8) bool {
+    return (position.y >= 0 and
+        position.y < data.len and
+        position.x >= 0 and
+        position.x < data[@intCast(position.y)].len);
+}
+
 fn part1(data: ArrayList([]const u8), allocator: Allocator) !void {
     var nodes = AutoHashMap(u8, ArrayList(Position)).init(allocator);
     defer freeNodes(&nodes);
 
     try addNodes(data, &nodes, std.heap.page_allocator);
 
-    printNodes(nodes);
+    var antinodes_set = AutoHashMap(Position, void).init(allocator);
+    defer antinodes_set.deinit();
 
-    const result = 0;
-    print("Part 1: {d}\n", .{result});
+    // printNodes(nodes);
+
+    var node_iterator = nodes.iterator();
+    while (node_iterator.next()) |entry| {
+        const positions = entry.value_ptr.*.items;
+        for (positions, 0..) |node1, i| {
+            for (i + 1..positions.len) |j| {
+                const node2 = positions[j];
+                const antinodes = getAntinodes(node1, node2);
+                for (antinodes) |antinode| {
+                    if (positionInBounds(antinode, data.items)) {
+                        antinodes_set.put(antinode, void{}) catch unreachable;
+                    }
+                }
+            }
+        }
+    }
+
+    print("Part 1: {d}\n", .{antinodes_set.count()});
 }
 
 fn part2() !void {}
