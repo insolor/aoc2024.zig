@@ -116,7 +116,66 @@ fn part1(data: ArrayList([]const u8), allocator: Allocator) !void {
     print("Part 1: {d}\n", .{antinodes_set.count()});
 }
 
-fn part2() !void {}
+const AntinodesIterator = struct {
+    current_position: Position,
+    dx: isize,
+    dy: isize,
+
+    fn init(node1: Position, node2: Position) AntinodesIterator {
+        const dx = node2.x - node1.x;
+        const dy = node2.y - node1.y;
+        return .{ .current_position = node2, .dx = dx, .dy = dy };
+    }
+
+    fn next(self: *AntinodesIterator) ?Position {
+        self.current_position.x += self.dx;
+        self.current_position.y += self.dy;
+        return self.current_position;
+    }
+};
+
+fn part2(data: ArrayList([]const u8), allocator: Allocator) !void {
+    var nodes = AutoHashMap(u8, ArrayList(Position)).init(allocator);
+    defer freeNodes(&nodes);
+
+    try addNodes(data, &nodes, std.heap.page_allocator);
+
+    var antinodes_set = AutoHashMap(Position, void).init(allocator);
+    defer antinodes_set.deinit();
+
+    var node_iterator = nodes.iterator();
+    while (node_iterator.next()) |entry| {
+        const positions = entry.value_ptr.*.items;
+        for (positions, 0..) |node1, i| {
+            for (i + 1..positions.len) |j| {
+                const node2 = positions[j];
+                
+                antinodes_set.put(node1, void{}) catch unreachable;
+                antinodes_set.put(node2, void{}) catch unreachable;
+                
+                var forward_antinodes = AntinodesIterator.init(node1, node2);
+                while (forward_antinodes.next()) |antinode| {
+                    if (!positionInBounds(antinode, data.items)) {
+                        break;
+                    }
+
+                    antinodes_set.put(antinode, void{}) catch unreachable;
+                }
+
+                var backward_antinodes = AntinodesIterator.init(node2, node1);
+                while (backward_antinodes.next()) |antinode| {
+                    if (!positionInBounds(antinode, data.items)) {
+                        break;
+                    }
+
+                    antinodes_set.put(antinode, void{}) catch unreachable;
+                }
+            }
+        }
+    }
+
+    print("Part 1: {d}\n", .{antinodes_set.count()});
+}
 
 pub fn main() !void {
     print("Day 08\n", .{});
@@ -130,5 +189,5 @@ pub fn main() !void {
     defer data.deinit();
 
     try part1(data, allocator);
-    try part2();
+    try part2(data, allocator);
 }
