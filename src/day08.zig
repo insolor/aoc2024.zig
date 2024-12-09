@@ -149,10 +149,10 @@ fn part2(data: ArrayList([]const u8), allocator: Allocator) !void {
         for (positions, 0..) |node1, i| {
             for (i + 1..positions.len) |j| {
                 const node2 = positions[j];
-                
+
                 antinodes_set.put(node1, void{}) catch unreachable;
                 antinodes_set.put(node2, void{}) catch unreachable;
-                
+
                 var forward_antinodes = AntinodesIterator.init(node1, node2);
                 while (forward_antinodes.next()) |antinode| {
                     if (!positionInBounds(antinode, data.items)) {
@@ -190,4 +190,5 @@ pub fn main() !void {
 
     try part1(data, allocator);
     try part2(data, allocator);
+    print("\n", .{});
 }

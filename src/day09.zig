@@ -13,13 +13,8 @@ fn loadDiskMap(allocator: Allocator) ArrayList(u8) {
     return processed;
 }
 
-fn part1(disk_map: []const u8, allocator: std.mem.Allocator) !void {
+fn getLayout(disk_map: []const u8, allocator: Allocator) ArrayList(?usize) {
     var layout = ArrayList(?usize).init(allocator);
-    defer layout.deinit();
-
-    var empty_spaces = ArrayList(usize).init(allocator);
-    defer empty_spaces.deinit();
-
     var id: usize = 0;
     var is_empty: bool = false;
     for (disk_map) |value| {
@@ -32,15 +27,24 @@ fn part1(disk_map: []const u8, allocator: std.mem.Allocator) !void {
             id += 1;
         } else {
             for (0..value) |_| {
-                empty_spaces.append(layout.items.len) catch unreachable;
                 layout.append(null) catch unreachable;
             }
         }
     }
-    print("Layout: {any}\n", .{layout.items});
-    print("Empty spaces: {any}\n", .{empty_spaces.items});
+    return layout;
+}
 
-    // Compacting
+fn getEmptySpaces(layout: []const ?usize, allocator: Allocator) ArrayList(usize) {
+    var empty_spaces = ArrayList(usize).init(allocator);
+    for (layout, 0..) |value, i| {
+        if (value == null) {
+            empty_spaces.append(i) catch unreachable;
+        }
+    }
+    return empty_spaces;
+}
+
+fn compactVer1(layout: *ArrayList(?usize), empty_spaces: *ArrayList(usize)) void {
     var available_empty: usize = 0;
     while (available_empty < empty_spaces.items.len) {
         const empty_index = empty_spaces.items[available_empty];
@@ -56,16 +60,26 @@ fn part1(disk_map: []const u8, allocator: std.mem.Allocator) !void {
         layout.items[empty_index] = last_item;
         available_empty += 1;
     }
+}
 
-    print("Final layout: {any}\n", .{layout.items});
-
-    // Checksum
+fn calculateChecksum(layout: []const ?usize) usize {
     var checksum: usize = 0;
-    for (layout.items, 0..) |value, i| {
+    for (layout, 0..) |value, i| {
         checksum += value.? * i;
     }
+    return checksum;
+}
 
-    print("Part 1: {d}\n", .{checksum});
+fn part1(disk_map: []const u8, allocator: std.mem.Allocator) !void {
+    var layout = getLayout(disk_map, allocator);
+    defer layout.deinit();
+
+    var empty_spaces = getEmptySpaces(layout.items, allocator);
+    defer empty_spaces.deinit();
+
+    compactVer1(&layout, &empty_spaces);
+
+    print("Part 1: {d}\n", .{calculateChecksum(layout.items)});
 }
 
 fn part2() !void {
@@ -84,4 +98,6 @@ pub fn main() !void {
 
     try part1(disk_map.items, allocator);
     try part2();
+
+    print("\n", .{});
 }
