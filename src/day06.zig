@@ -1,4 +1,8 @@
 const std = @import("std");
+const utils = @import("utils.zig");
+const Position = utils.Position;
+const Direction = utils.Direction;
+const outOfBounds = utils.outOfBounds;
 const print = std.debug.print;
 
 const ArrayList = std.ArrayList;
@@ -17,33 +21,6 @@ fn loadData(allocator: std.mem.Allocator) !ArrayList([]const u8) {
     return result;
 }
 
-const Position = struct { x: isize, y: isize };
-
-const Direction = enum {
-    north,
-    south,
-    east,
-    west,
-
-    fn turn(self: Direction) Direction {
-        return switch (self) {
-            .north => .east,
-            .east => .south,
-            .south => .west,
-            .west => .north,
-        };
-    }
-
-    fn step(self: Direction, position: Position) Position {
-        return switch (self) {
-            .north => .{ .x = position.x, .y = position.y - 1 },
-            .south => .{ .x = position.x, .y = position.y + 1 },
-            .west => .{ .x = position.x - 1, .y = position.y },
-            .east => .{ .x = position.x + 1, .y = position.y },
-        };
-    }
-};
-
 fn findStart(data: []const []const u8) ?Position {
     for (data, 0..) |row, y| {
         for (row, 0..) |char, x| {
@@ -53,10 +30,6 @@ fn findStart(data: []const []const u8) ?Position {
         }
     }
     return null;
-}
-
-fn outOfBounds(position: Position, data: []const []const u8) bool {
-    return position.x < 0 or position.y < 0 or position.x >= data[0].len or position.y >= data.len;
 }
 
 const State = struct { position: Position, direction: Direction };
@@ -72,7 +45,7 @@ const Iterator = struct {
             return null;
         }
         while (self.field[@intCast(new_position.y)][@intCast(new_position.x)] == '#') {
-            self.direction = self.direction.turn();
+            self.direction = self.direction.turnRight();
             new_position = self.direction.step(self.position);
         }
         self.position = new_position;
