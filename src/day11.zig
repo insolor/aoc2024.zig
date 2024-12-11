@@ -1,5 +1,6 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
+const AutoHashMap = std.AutoHashMap;
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 
@@ -117,102 +118,61 @@ fn part1(data: ArrayList(u64), allocator: Allocator) !void {
     current_state.deinit();
 }
 
-fn nextStateFiles(fileName1: []const u8, fileName2: []const u8, allocator: std.mem.Allocator) !void {
-    var fileIn = try std.fs.cwd().openFile(fileName1, .{});
-    defer fileIn.close();
+fn addValue(stones: *AutoHashMap(u64, usize), key: u64, value: usize) void {
+    if (stones.get(key)) |v| {
+        stones.put(key, v + value) catch unreachable;
+    } else {
+        stones.put(key, value) catch unreachable;
+    }
+}
 
-    var buf_reader = std.io.bufferedReader(fileIn.reader());
-    var in_stream = buf_reader.reader();
+fn nextStateHashMap(stones: *AutoHashMap(u64, usize), allocator: std.mem.Allocator) AutoHashMap(u64, usize) {
+    var result = AutoHashMap(u64, usize).init(allocator);
 
-    var fileOut = try std.fs.cwd().createFile(fileName2, .{});
-    defer fileOut.close();
-
-    var buf_writer = std.io.bufferedWriter(fileOut.writer());
-    var out_stream = buf_writer.writer();
-
-    var buf: [1024]u8 = undefined;
-    var count_before_flush: usize = 0;
-    while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        const stone = try std.fmt.parseUnsigned(u64, line, 10);
-        if (stone == 0) {
-            try out_stream.print("1\n", .{});
+    var iterator = stones.iterator();
+    while (iterator.next()) |entry| {
+        const value = entry.key_ptr.*;
+        const count = entry.value_ptr.*;
+        if (value == 0) {
+            addValue(&result, 1, count);
             continue;
         }
 
-        const new_stones = splitNumber(stone, allocator);
+        const new_stones = splitNumber(entry.key_ptr.*, allocator);
         if (new_stones != null) {
-            try out_stream.print("{}\n{}\n", .{ new_stones.?[0], new_stones.?[1] });
-        } else {
-            try out_stream.print("{}\n", .{stone * 2024});
+            addValue(&result, new_stones.?[0], count);
+            addValue(&result, new_stones.?[1], count);
+            continue;
         }
 
-        count_before_flush += 1;
-        if (count_before_flush >= 1000) {
-            try buf_writer.flush();
-            count_before_flush = 0;
-        }
+        addValue(&result, value * 2024, count);
     }
-    try buf_writer.flush();
-}
 
-fn writeDataToFile(data: []const u64, fileName: []const u8) !void {
-    var file = try std.fs.cwd().createFile(fileName, .{});
-    defer file.close();
-
-    var buf_writer = std.io.bufferedWriter(file.writer());
-    var out_stream = buf_writer.writer();
-    for (data) |stone| {
-        try out_stream.print("{}\n", .{stone});
-    }
-    try buf_writer.flush();
-}
-
-fn countFileLines(fileName: []const u8) !u64 {
-    var file = try std.fs.cwd().openFile(fileName, .{});
-    defer file.close();
-
-    var buf_reader = std.io.bufferedReader(file.reader());
-    var in_stream = buf_reader.reader();
-    var buf: [1024]u8 = undefined;
-    var count: u64 = 0;
-    while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |_| {
-        if (buf.len != 0) {
-            count += 1;
-        }
-    }
-    return count;
-}
-
-fn formatFileName(counter: usize, allocator: Allocator) ![]const u8 {
-    return try std.fmt.allocPrint(allocator, "{d}.txt", .{counter});
+    return result;
 }
 
 fn part2(data: []const u64, allocator: Allocator) !void {
-    var counter: usize = 0;
-
-    const initial_file_name = try formatFileName(counter, allocator);
-    defer allocator.free(initial_file_name);
-    try writeDataToFile(data, initial_file_name);
-    try std.testing.expectEqual(data.len, try countFileLines(initial_file_name));
-
-    var prev_name = initial_file_name;
-    for (0..75) |i| {
-        print("Iteration: {d}\n", .{i});
-
-        const next_name = try formatFileName(counter + 1, allocator);
-
-        try nextStateFiles(prev_name, next_name, allocator);
-
-        try std.fs.cwd().deleteFile(prev_name);
-        allocator.free(prev_name);
-
-        prev_name = next_name;
-        counter += 1;
+    var current_state = AutoHashMap(u64, usize).init(allocator);
+    for (data) |stone| {
+        addValue(&current_state, stone, 1);
     }
 
-    counter = 0;
+    for (0..75) |_| {
+        // print("Step {d}\n", .{i});
+        // print("Size {d}\n\n", .{current_state.count()});
+        const new_state = nextStateHashMap(&current_state, allocator);
+        current_state.deinit();
+        current_state = new_state;
+    }
 
-    print("Part 2: {d}\n", .{try countFileLines(prev_name)});
+    var total: usize = 0;
+    var iterator = current_state.valueIterator();
+    while (iterator.next()) |value| {
+        total += value.*;
+    }
+
+    print("Part 2: {d}\n", .{total});
+    current_state.deinit();
 }
 
 pub fn main() !void {
