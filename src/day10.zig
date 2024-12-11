@@ -130,6 +130,8 @@ fn part2(data: []const []const u8) !void {
 }
 
 pub fn main() !void {
+    print("Day 10\n", .{});
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
@@ -140,5 +142,5 @@ pub fn main() !void {
     try part1(data.items, allocator);
     try part2(data.items);
 
-    print("Day 10\n", .{});
+    print("\n", .{});
 }
