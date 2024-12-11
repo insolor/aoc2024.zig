@@ -131,6 +131,7 @@ fn nextStateFiles(fileName1: []const u8, fileName2: []const u8, allocator: std.m
     var out_stream = buf_writer.writer();
 
     var buf: [1024]u8 = undefined;
+    var count_before_flush: usize = 0;
     while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         const stone = try std.fmt.parseUnsigned(u64, line, 10);
         if (stone == 0) {
@@ -141,9 +142,15 @@ fn nextStateFiles(fileName1: []const u8, fileName2: []const u8, allocator: std.m
         const new_stones = splitNumber(stone, allocator);
         if (new_stones != null) {
             try out_stream.print("{}\n{}\n", .{ new_stones.?[0], new_stones.?[1] });
-            continue;
+        } else {
+            try out_stream.print("{}\n", .{stone * 2024});
         }
-        try out_stream.print("{}\n", .{stone * 2024});
+
+        count_before_flush += 1;
+        if (count_before_flush >= 1000) {
+            try buf_writer.flush();
+            count_before_flush = 0;
+        }
     }
     try buf_writer.flush();
 }
