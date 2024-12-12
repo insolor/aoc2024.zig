@@ -25,46 +25,28 @@ fn loadData(allocator: std.mem.Allocator) !ArrayList([]const u8) {
     return result;
 }
 
-// fn countCellFences(data: []const []const u8, x: usize, y: usize) !usize {
-//     var cell_fences: isize = 4;
-//     const current_value = data[y][x];
-//     inline for (std.meta.fields(Direction)) |direction| {
-//         const new_position = @field(Direction, direction.name)
-//             .step(.{ .x = @intCast(x), .y = @intCast(y) });
-//         if (outOfBounds(new_position, data)) {
-//             continue;
-//         }
-//         if (data[new_position.y][new_position.x] == current_value) {
-//             cell_fences -= 1;
-//         }
-//     }
-//     return @intCast(cell_fences);
-// }
-
 const AreaPerimeter = struct { area: usize, perimeter: usize };
 
 fn countGroupAreaAndPerimeter(
     data: []const []const u8,
-    x: usize,
-    y: usize,
+    position: Position,
     visited: *AutoHashMap(Position, void),
     area_perimeter: *AreaPerimeter,
 ) !void {
-    const current_value = data[y][x];
-    try visited.put(.{ .x = @intCast(x), .y = @intCast(y) }, {});
+    const current_value = data[@intCast(position.y)][@intCast(position.x)];
+    try visited.put(position, {});
 
     var cell_fences: isize = 4;
     inline for (std.meta.fields(Direction)) |direction| {
         const new_position = @field(Direction, direction.name)
-            .step(.{ .x = @intCast(x), .y = @intCast(y) });
+            .step(position);
         if (!outOfBounds(new_position, data)) {
             if (data[@intCast(new_position.y)][@intCast(new_position.x)] == current_value) {
                 cell_fences -= 1;
                 if (!visited.contains(.{ .x = @intCast(new_position.x), .y = @intCast(new_position.y) })) {
                     try countGroupAreaAndPerimeter(
                         data,
-                        @intCast(new_position.x),
-                        @intCast(new_position.y),
+                        new_position,
                         visited,
                         area_perimeter,
                     );
@@ -84,13 +66,14 @@ fn part1(data: []const []const u8, allocator: std.mem.Allocator) !void {
     var total_cost: usize = 0;
     for (data, 0..) |row, y| {
         for (row, 0..) |_, x| {
-            if (visited.contains(.{ .x = @intCast(x), .y = @intCast(y) })) {
+            const position = Position{ .x = @intCast(x), .y = @intCast(y) };
+            if (visited.contains(position)) {
                 continue;
             }
 
             var result = AreaPerimeter{ .area = 0, .perimeter = 0 };
 
-            try countGroupAreaAndPerimeter(data, x, y, &visited, &result);
+            try countGroupAreaAndPerimeter(data, position, &visited, &result);
             // print("Region {c}: area={d}, perimeter={d}\n", .{ row[x], result.area, result.perimeter });
             total_cost += result.area * result.perimeter;
         }
